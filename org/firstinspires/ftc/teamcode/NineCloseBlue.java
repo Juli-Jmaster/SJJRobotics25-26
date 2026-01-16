@@ -15,7 +15,7 @@ import org.firstinspires.ftc.teamcode.library.drive.DriveMainAuto;
 
 
 @TeleOp
-public class NineCloseRed extends LinearOpMode implements DriveMainAuto {
+public class NineCloseBlue extends LinearOpMode implements DriveMainAuto {
 
     private DcMotorEx outtake;
     private DcMotor intake1;
@@ -54,14 +54,14 @@ public class NineCloseRed extends LinearOpMode implements DriveMainAuto {
         // }
 
         straightStart(-45);
-        face(-5);
+        face(-5*-1);
 //        outtake.setPower(0);
         outtake.setVelocity(1250);
         // shootNextWait();
         transferShoot();
         //transfer and shoot sequence
-        face(-47);
-        sideways(3);//-1//-.5//.4//1
+        face(-47*-1);
+        sideways(-1*3);//-1//-.5//.4//1
         // //run intake
         straightIntake(34.5);
         // //stop intake
@@ -72,18 +72,18 @@ public class NineCloseRed extends LinearOpMode implements DriveMainAuto {
         face(0);
         transferShoot();
 
-        face(-47);
-        sideways(24); //*******
+        face(-47*-1);
+        sideways(26*-1); //*******
 
         straightIntake(34);
         // waitSeconds(1);
         intake1.setPower(0);
-        straight(-28);
-        sideways(-18);
+        straight(-30);
+        sideways(-16*-1);
         face(0);
         straight(4);
         transferShoot();
-        sideways(20);
+        sideways(20*-1);
 
         //  sideways(-21);
         //  face(0);
@@ -109,34 +109,32 @@ public class NineCloseRed extends LinearOpMode implements DriveMainAuto {
         ElapsedTime timer = new ElapsedTime();
         timer.reset();
         while (opModeIsActive()) {
-            if (outtake.getVelocity() >= 1260 && outtake.getVelocity() <= 1320) {
+            if (outtake.getVelocity() >= 1220 && outtake.getVelocity() <= 1320) {
                 break;
             }
         }
     }
 
     public void transferShoot(){
-        outtake.setVelocity(2800);
         //shootNextWait();
         transfer.setPower(0.7);
         intake1.setPower(0.7);
-        waitSeconds(.5);
-        outtake.setVelocity(1260);
+        waitSeconds(.13);
         transfer.setPower(0);
-        intake1.setPower(1);
-        // shootNextWait();
+        intake1.setPower(0);
+        shootNextWait();
         // waitSeconds(.5);
-        // transfer.setPower(0.7);
-        // intake1.setPower(0.7);
-        // waitSeconds(.13);
-        // transfer.setPower(0);
-        // intake1.setPower(0);
-        // shootNextWait();
+        transfer.setPower(0.7);
+        intake1.setPower(0.7);
+        waitSeconds(.13);
+        transfer.setPower(0);
+        intake1.setPower(0);
+        shootNextWait();
         // waitSeconds(.5);
-        // transfer.setPower(0.7);
-        // intake1.setPower(.7);
-        // waitSeconds(.4);
-        // transfer.setPower(0);
+        transfer.setPower(0.7);
+        intake1.setPower(.7);
+        waitSeconds(.4);
+        transfer.setPower(0);
 
 
     }

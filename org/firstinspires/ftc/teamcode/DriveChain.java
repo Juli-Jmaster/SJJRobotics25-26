@@ -17,12 +17,14 @@ public class DriveChain extends LinearOpMode {
     private DcMotor intake1;
     private DcMotor intake2;
     //    private boolean kicks = true;
-//    private boolean oncey = false;
+    private boolean oncea = false;
+    private boolean onceb = false;
     private boolean intake = false;
     private boolean transfer = false;
     //    private Servo kick;
     private boolean lastA = false;
     private boolean lastB = false;
+    private int inc = 970;
 
 
     private IMU imu;
@@ -48,10 +50,16 @@ public class DriveChain extends LinearOpMode {
         intake2.setDirection(DcMotorSimple.Direction.REVERSE);
 
         outtake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+//        outtake.setVelocityPIDFCoefficients(
+//                3.2,   // P
+//                0.0,   // I
+//                1,   // D
+//                13.8   // F
+//        );
         outtake.setVelocityPIDFCoefficients(
-                3.2,   // P
+                4.5,   // P
                 0.0,   // I
-                1,   // D
+                0.6,   // D
                 13.8   // F
         );
         intake1.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -72,7 +80,7 @@ public class DriveChain extends LinearOpMode {
                 //.55 for close to goal 3900rpm
                 //.65 for far to goal 3300rpm
             } else if (gamepad1.right_trigger >= 0.2){
-                outtake.setVelocity(1250);
+                outtake.setVelocity(inc);
                 //.55 for close to goal 3900rpm
                 //.65 for far to goal 3300rpm
             }
@@ -100,9 +108,13 @@ public class DriveChain extends LinearOpMode {
             if (gamepad1.b) {
 //                transfer = !transfer;
                 intake1.setPower(1);
-                intake2.setPower(1);
+                intake2.setPower(0.8);
+                outtake.setVelocity(2800);
+
+
             } else {
                 intake1.setPower(0);
+                outtake.setVelocity(inc);
                 if (lastB){
                     intake2.setPower(0);
                 }
@@ -116,18 +128,25 @@ public class DriveChain extends LinearOpMode {
 
 
 
-            //
-//            if(gamepad1.a && !(oncea)){
-//                if(transfer){
-//                    intake2.setPower(1);
-//                    transfer=false;
-//                } else if(!(transfer)){
-//                    intake2.setPower(0);
-//                    transfer=true;
-//                }
-//                oncea =true;
-//            } else {
-//                oncea =false;
+
+            if(gamepad1.dpad_up && !(oncea)){
+                inc+=10;
+                oncea =true;
+            } else {
+                oncea =false;
+            }
+
+            if(gamepad1.dpad_down && !(onceb)){
+                inc-=10;
+                onceb =true;
+            } else {
+                onceb =false;
+            }
+
+//            if (gamepad1.dpad_up){
+//
+//            } if (gamepad1.dpad_down){
+//                inc-=10;
 //            }
 
 
@@ -148,6 +167,7 @@ public class DriveChain extends LinearOpMode {
             // telemetry.update();
             // backRight.setPower(1);
             //long before time had a name, the first spinjitsu master created ninjago GET OUT
+            telemetry.addData("setVel", inc);
             telemetry.addData("vel", outtake.getVelocity());
             telemetry.update();
         }
@@ -177,7 +197,7 @@ public class DriveChain extends LinearOpMode {
         // telemetry.addData("dem", denominator);
         // telemetry.addData("value", value /  denominator);
 
-        return (value /  denominator)*.75;
+        return (value /  denominator)*1;
     }
 
 
