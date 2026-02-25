@@ -1,41 +1,61 @@
 package org.firstinspires.ftc.teamcode.library;
 
+
+import org.firstinspires.ftc.teamcode.library.motor.AvgOdomMotor;
 import org.firstinspires.ftc.teamcode.library.motor.OdometryMotor;
 
 public interface RobotConstants {
-
-    //* Overall Default Max power
-    double defaultPower = 0.8;
-
-    //* MovementCurves.java
-    //THRESHOLD should be equal to the minimum amount or little higher of power it takes to move the robot forward or directly sideways
-    double minimumPowerToMove = 0.15;  // or .2
-
-    //* Drive MovementCurves and settings
+    //* Drive settings
     // all drive motor set to brake for Zero Power Behavior
     boolean driveMotorBrake  = true;
     //if all motor have encoders cables attached and want to use those instead
     boolean drivemotorEncoders = false;
 
-    int defaultDriveMovementCurve = MovementCurves.ROUNDEDSQUARE; //TODO: find correct one
-    double defaultDriveMultipier = 1;
+    String frontRightMotorName = "frontRight" ;
+    boolean frontRightReversed = false;
+
+    String frontLeftMotorName = "frontLeft";
+    boolean frontLeftReversed = true;
+
+    String backRightMotorName = "backRight";
+    boolean backRightReversed = false;
+
+    String backLeftMotorName = "backLeft";
+    boolean backLeftReversed = true ;
+
+    //* Overall Drive power
+    double defaultPower = 0.8;
+    //THRESHOLD should be equal to the minimum amount or little higher of power it takes to move the robot forward or directly sideways
+    double minimumPowerStraight = 0.1;  // or .2
+    double minimumPowerSideways = 0.2;  // or .2
+    double minimumPowerToTurn = 0.1;
+
+    int inchesForMinPower = 2;
+    int inchesForTwiceMinPower = 6;
+    /* the default tolerance for when turning
+       how many degrees off it can be before stopping
+       Ex. is 3 degreees of from target say robot got to the position */
+    int defaultToleranceFace = 1;
+    /*time before the notFacing() return false as it may be stuck in being exact*/
+    int defaultTimeWaitForTurn = 3;
+
+    //const for amount of ticks before to stop the motors for;
+    int defaultTicksStopAmount = 10;
+    double defaultDriveTurnAdjustMultiplier = 0.4;
+
+    //* MovementCurves.java
+    //* Straight MovementCurves
+    int defaultStraightMovementCurve = MovementCurves.EXPEASEOUT;
+    double defaultStraightMultipier = 1;
 
     //* Sideways MovementCurves
-    //? DO WE NEED
-    int defaultTurnMovementCurve = MovementCurves.ROUNDEDSQUARE; //TODO: find correct one
-    double defaultTurnMultipier = 1;
-
+    int defaultSidewaysMovementCurve = MovementCurves.EXPEASEOUT;
+    double defaultSidewaysMultipier = 1;
 
     //* IMU MovementCurves
-    int defaultIMUTurnMovementCurve = MovementCurves.PARAMETRIC;
+    int defaultIMUTurnMovementCurve = MovementCurves.QUADRATIC;
     double defaultIMUTurnMultipier = .6;
-    double minimumPowerToTurn = 0.1;
-    // the default tolerance for when turning
-    //how many degrees off it can be before stopping
-    // Ex. is 3 degreees of from target say robot got to the position
-    int defaultToleranceFace = 3;
-    //time before the notFacing() return false as it may be stuck in being exact
-    int defaultTimeWaitForTurn = 3;
+
 
     //* Default Odometry settings
     //also found in class OdemetryMotor.java
@@ -45,33 +65,19 @@ public interface RobotConstants {
     //  which is called Encoder Resolution on the specs of motor or odemetry pod
     //  it either be  "Parts Per Revolution (PPR)" or "Countable Events per Revolution"
     //  "PPR" is TYPE.PPR and "Countable Events per Revolution" is TYPE.TICKPERREV
-    OdometryMotor.WHEELTYPE diameterLengthType = OdometryMotor.WHEELTYPE.MM;
-    int diameterLength = 48;
+//    OdometryMotor.WHEELTYPE diameterLengthType = OdometryMotor.WHEELTYPE.MM;
+//    int diameterLength = 48;
+//
+//    OdometryMotor.TYPE ticksPerType = OdometryMotor.TYPE.TICKPERREV;
+//    int ticksPerTypeNumber = 2000;
 
-    OdometryMotor.TYPE ticksPerType = OdometryMotor.TYPE.TICKPERREV;
-    int ticksPerTypeNumber = 2000;
+//    AvgOdomMotor straightOdometry = new AvgOdomMotor(
+//            new OdometryMotor("straight", OdometryMotor.WHEELTYPE.MM, 48, OdometryMotor.TYPE.TICKPERREV, 2000)
+//            //           new OdometryMotor("straight2", OdometryMotor.WHEELTYPE.MM, 48, OdometryMotor.TYPE.TICKPERREV, 2000),
+//    );
+//    AvgOdomMotor sidewaysOdometry = new AvgOdomMotor(
+//            new OdometryMotor("sideways", OdometryMotor.WHEELTYPE.MM, 48, OdometryMotor.TYPE.TICKPERREV, 2000)
+////          new OdometryMotor("sideways2", OdometryMotor.WHEELTYPE.MM, 48, OdometryMotor.TYPE.TICKPERREV, 2000)
+//    );
 
-
-    String frontRightMotorName = "frontright" ;
-    boolean frontRightReversed = false;
-
-    String frontLeftMotorName = "frontleft";
-    boolean frontLeftReversed = false;
-
-    String backRightMotorName = "backright";
-    boolean backRightReversed = false;
-
-    String backLeftMotorName = "backleft";
-    boolean backLeftReversed = false ;
-    //? old (DO NEED?)
-    // do not modify;used for when running
-    int itorator = 0;
-    int straight = 0;
-    int sideways = 1;
-
-    //used for while in drive loop
-    //only use if statements so drive can still work effectively
-    default void whileDrive(int MOVE){
-
-    }
 }
