@@ -1,6 +1,8 @@
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.hardware.limelightvision.LLResult;
+import com.qualcomm.hardware.limelightvision.LLResultTypes;
+import com.qualcomm.robotcore.util.ElapsedTime;
 import java.util.ArrayList;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
@@ -14,197 +16,286 @@ import java.util.List;
 @TeleOp
 
 public class DriveTrigger extends LinearOpMode {
+    private enum search {
+        NONE(0), FIRST(1), SUCCESS(2);
+        private int code;
+        search(int code) {
+            this.code = code;
+        }
+        public int getCode() {
+            return code;
+        }
+        public void setCode(int code) {
+            this.code = code;
+        }
+    }
+    private search searchState = search.NONE;
 
     //drive
+    private ElapsedTime time = new ElapsedTime();
     private DcMotor backLeft;
     private DcMotor backRight;
     private DcMotor frontLeft;
     private DcMotor frontRight;
     private DcMotorEx outtake;
-    private DcMotor intake1;
-    private DcMotor intake2;
+    private DcMotorEx outtake2;
+    private DcMotor transfer;
+    private DcMotor intake;
     private Servo hood;
+    private Servo t1;
+    private Servo t2;
     private boolean oncea = false;
     private boolean onceb = false;
     private boolean shoot = false;
     private int inc = 900;//1250
+    private int TarId = 24;
 
     //limelight
     private Limelight3A limelight;
     private IMU imu;
     private double error = 0;
-    double lastError = 0;
-    private double angleTolerance;
+    private double lastError = 0;
     private double goalX = 0;
     private double kP = 0.04;
     private double kD = 0.007;
     private double curTime = 0;
     private double lastTime;
-    private double rotate=0;
-    private double hoodA=0;
-    private List<Double> list = new ArrayList<>();
+    private double rotate = 0;
+    private double hoodA = 0;
+    private double adjust = 0.005;
+    private double notRotateTxRange = 4;
+    private double kPDSwitch = 5;
+    private double lastPos =0.5;
+    private enum turrnetState {
+        ADJUST, SMALL, LARGE, AT, NONE;
+    }
 
+
+    private void rotateTurret(double rotate) {
+        if (rotate != 0) {
+            t1.setPosition(t1.getPosition() + rotate);
+            t2.setPosition(t2.getPosition() + rotate);
+        }
+    }
+
+    private void searchSmall() {
+        double cur = t1.getPosition();
+        telemetry.addData("NOTsUB", !(searchState == search.SUCCESS));
+        //move to left
+        if (lastPos > 0 && !(searchState == search.SUCCESS))  {
+            t1.setPosition(t1.getPosition() + adjust);
+            t2.setPosition(t2.getPosition() + adjust);
+            if (t1.getPosition() >= .7) {
+                //switch to go to the right
+                lastPos = -1;
+                if (searchState == search.NONE) {
+                    searchState = search.FIRST;
+                } else if (searchState == search.FIRST) {
+                    searchState = search.SUCCESS;
+                }
+            }
+            //move to the right
+        } else if (lastPos < 0 && !(searchState == search.SUCCESS)) {
+            t1.setPosition(t1.getPosition() - adjust);
+            t2.setPosition(t2.getPosition() - adjust);
+            if (t1.getPosition() <= 0.2) {
+                //switch to go to the left
+                lastPos = 1;
+                if (searchState == search.NONE) {
+                    searchState = search.FIRST;
+                } else if (searchState == search.FIRST) {
+                    searchState = search.SUCCESS;
+                }
+            }
+        }
+        if (searchState == search.SUCCESS) {
+            turretLarge();
+        }
+    }
+
+    private void turretLarge() {
+    }
 
     @Override
     public void runOpMode() throws InterruptedException {
-        backLeft = hardwareMap.get(DcMotor.class, "backLeft");
-        backRight = hardwareMap.get(DcMotor.class, "backRight");
-        frontLeft = hardwareMap.get(DcMotor.class, "frontLeft");
-        frontRight = hardwareMap.get(DcMotor.class, "frontRight");
-        outtake = hardwareMap.get(DcMotorEx.class, "outtake");
-        intake1 = hardwareMap.get(DcMotor.class, "intake1");
-        intake2 = hardwareMap.get(DcMotor.class, " intake2");
-        hood =  hardwareMap.get(Servo.class, "hood");
+        backLeft = hardwareMap.get(DcMotor.class, "BL");
+        backRight = hardwareMap.get(DcMotorEx.class, "BR");
+        frontLeft = hardwareMap.get(DcMotor.class, "FL");
+        frontRight = hardwareMap.get(DcMotor.class, "FR");
+        outtake = hardwareMap.get(DcMotorEx.class, "shoot");
+        outtake2 = hardwareMap.get(DcMotorEx.class, "shoot2");
+        transfer = hardwareMap.get(DcMotor.class, "transfer");
+        intake = hardwareMap.get(DcMotor.class, " intake");
+        hood = hardwareMap.get(Servo.class, "hood");
+        t1 = hardwareMap.get(Servo.class, "t1");
+        t2 = hardwareMap.get(Servo.class, "t2");
 //        kick = hardwareMap.get(Servo.class, "kick");
 //        kick.setPosition(0.8);
 
 
-
-        // frontRight.setDirection(DcMotorSimple.Direction.REVERSE);
         backLeft.setDirection(DcMotorSimple.Direction.REVERSE);
         frontLeft.setDirection(DcMotorSimple.Direction.REVERSE);
-        //  outtake.setDirection(DcMotorSimple.Direction.REVERSE);
-        intake1.setDirection(DcMotorSimple.Direction.REVERSE);
-//      SIXXTYY SEEVEEENN LOLOLOLOLOLOL TRALALALALLAAAAAAA 67 GEETTT OOUUUTTTT!!!!
-        intake2.setDirection(DcMotorSimple.Direction.REVERSE);
+        //intake.setDirection(DcMotorSimple.Direction.FORWARD);
+        transfer.setDirection(DcMotorSimple.Direction.REVERSE);
 
-        outtake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        // outtake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         outtake.setVelocityPIDFCoefficients(
-                100,   // P
-                0, // I
-                0.,    // D
-                18.45  // F
+
+                85,   // P
+                0., // I
+                0,    // D
+                16.8  // F
         );
-        intake1.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        intake2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        outtake2.setVelocityPIDFCoefficients(
+
+                85,   // P
+                0., // I
+                0,    // D
+                16.8  // F
+        );
+        intake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        transfer.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        outtake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        outtake2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
+
+        backLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        backRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        frontLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        frontRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
 //        frontLeft.setPower(1);
         limelightInit();
         waitForStart();
-        hood.setPosition(.49);
-        hoodA=.49;
+        hood.setPosition(.5);
+        // hoodA=.49;
         limelightStart();
-        while (opModeIsActive()){
+        while (opModeIsActive()) {
             drive(gamepad1.left_stick_x, gamepad1.left_stick_y, gamepad1.right_stick_x);
-            if (gamepad1.a){
+            if (gamepad1.ps) {
+                inc = 0;
+            }
+            if (gamepad1.a) {
                 hood.setPosition(.48);
-                inc=90;
+                inc = 90;
                 //.55 for close to goal 3900rpm
                 //.65 for far to goal 3300rpm
-            } else if (gamepad1.b){
-                inc=1250;
+            } else if (gamepad1.b) {
+                inc = 1250;
                 hood.setPosition(.37);
                 //.55 for close to goal 3900rpm
                 //.65 for far to goal 3300rpm
             }
 
-            if (gamepad1.x){
-                hoodA+=0.001;
+            if (gamepad1.x) {
+                hoodA += 0.001;
                 hood.setPosition(hoodA);
-            } else if(gamepad1.y) {
-                hoodA-=0.001;
+            } else if (gamepad1.y) {
+                hoodA -= 0.001;
                 hood.setPosition(hoodA);
             }
 
 
-            if (gamepad1.left_trigger >= 0.2 && ((outtake.getVelocity() >= inc - 40 && outtake.getVelocity() <= inc + 40) || shoot==true)) {
-                // list.add(outtake.getVelocity());
-                shoot=true;
-//                transfer = !transfer;
-                // if(outtake.getVelocity() >= 880){
-                intake1.setPower(.9);
-                intake2.setPower(1);
+            if (gamepad1.left_trigger >= .2 /*&& ((outtake.getVelocity() >= inc - 40 && outtake.getVelocity() <= inc + 40) || shoot==true)*/) {
+                shoot = true;
+                intake.setPower(.9);
+                transfer.setPower(1);
                 // outtake.setPower(1);
-                // }
-                outtake.setVelocity(2500);
 
 
-            } else if(gamepad1.right_trigger >= 0.2){
-                shoot=false;
-                intake2.setPower(1);
+            } else if (gamepad1.right_trigger >= 0.2) {
+                shoot = false;
+                intake.setPower(1);
             } else {
-                intake1.setPower(0);
-                intake2.setPower(0);
-//              outtake.setPower(1);
-                outtake.setVelocity(inc);
+                transfer.setPower(0);
+                intake.setPower(0);
+                outtake.setVelocity(inc); //inc
+                outtake2.setVelocity(inc); //inc
+
             }
+            // if(time.seconds() > .1 &&time.seconds() > .2 && shoot==true){
+            //     intake.setPower(.9);
+            //     transfer.setPower(1);
+            //     outtake.setPower(1);
+            // }
 
-
-
-
-            if(gamepad1.start && !(oncea)){
-                inc+=1;
-                oncea =true;
+            if (gamepad1.start && !(oncea)) {
+                gamepad1.runRumbleEffect(new Gamepad.RumbleEffect.Builder().addStep(0.5, 0.5, 500).build());
+                inc += 1;
+                oncea = true;
             } else {
-                oncea =false;
+                oncea = false;
             }
 
-            if(gamepad1.back && !(onceb)){
-                inc-=1;
-                onceb =true;
+            if (gamepad1.back && !(onceb)) {
+                gamepad1.runRumbleEffect(new Gamepad.RumbleEffect.Builder().addStep(0.5, 0.5, 500).build());
+                inc -= 1;
+                onceb = true;
             } else {
-                onceb =false;
+                onceb = false;
             }
 
-            if(gamepad1.dpad_right){
-                drive((float)0.75,0,0);
-            } else if(gamepad1.dpad_left){
-                drive((float)-0.75,0,0);
-            } else if(gamepad1.dpad_up){
-                drive(0,(float)-0.75,0);
-            } else if(gamepad1.dpad_down){
-                drive(0,(float)0.75,0);
+            if (gamepad1.dpad_right) {
+                drive((float) 0.75, 0, 0);
+            } else if (gamepad1.dpad_left) {
+                drive((float) -0.75, 0, 0);
+            } else if (gamepad1.dpad_up) {
+                drive(0, (float) -0.75, 0);
+            } else if (gamepad1.dpad_down) {
+                drive(0, (float) 0.75, 0);
             }
 
-            if(gamepad1.left_bumper){
-                limelight();
-            }
+//            if(gamepad1.left_bumper){
+//                limelight();
+//            }
             lastError = 0;
             lastTime = getRuntime();
-            rotate=0;
+            rotate = 0;
 
             // telemetry.update();
             // backRight.setPower(1);
             //long before time had a name, the first spinjitsu master created ninjago GET OUT
 
+            turrent();
+
+            telemetry.addData("setVel", inc);
+            telemetry.addData("position", hood.getPosition());
+            telemetry.addData("outtake", outtake.getVelocity());
+            telemetry.addData("outtake2", outtake2.getVelocity());
             LLResult result = limelight.getLatestResult();
             if (result != null && result.isValid()) {
                 telemetry.addData("Ta", result.getTa());
+                telemetry.addData("Tx", result.getTx());
                 telemetry.addData("distance", distanceEQ(result.getTa()));
-
             }
-            telemetry.addData("setVel", inc);
-            telemetry.addData("vel", outtake.getVelocity());
-            telemetry.addData("position", hood.getPosition());
-            // telemetry.addData("list", list);
             telemetry.update();
         }
 
     }
 
-    private void limelight() {
+    private boolean limelight() {
+        boolean ret = false;
         YawPitchRollAngles orientation = imu.getRobotYawPitchRollAngles();
         limelight.updateRobotOrientation(orientation.getYaw());
         LLResult result = limelight.getLatestResult();
         if (result != null) {
             if (result.isValid()) {
-                double distance = distanceEQ(result.getTa());
                 //hood adjust
-                hood.setPosition(hoodEQ(distance));
+                //hood.setPosition(hoodEQ(result.getTa()));
                 //velocity adjust
-                inc=(int)velcoityEQ(distance);
-                outtake.setVelocity(inc);
+                //inc=(int)velcoityEQ(result.getTa());
+                // outtake.setVelocity(result.getTa());
 
 
                 //addjust to the goal
                 curTime = getRuntime();
                 error = goalX - result.getTx();
 
-                if (Math.abs(error) > 3) {
-                    kP = 0.04;
+                if (Math.abs(error) > 4) {
+                    kP = 0.045;
                     kD = 0.007;
                 } else {
-                    kP = 0.11;
+                    kP = 0.065;
                     kD = 0.004;
                 }
 
@@ -212,11 +303,15 @@ public class DriveTrigger extends LinearOpMode {
                 double dT = Math.max(curTime - lastTime, 0.001);
                 double dTerm = ((error - lastError) / dT) * kD;
 
+
                 rotate = Range.clip(pTerm + dTerm, -0.4, 0.4);
-                if (Math.abs(error) < 0.5) {
+                // was -.4 and .4
+                if (Math.abs(error) < 2) {
+                    ret = true;
                     rotate = 0;
                 } else {
-                    rotate*=-1;
+                    ret = false;
+                    rotate *= -1;
                 }
 
                 lastError = error;
@@ -225,20 +320,21 @@ public class DriveTrigger extends LinearOpMode {
         } else {
             lastError = 0;
             lastTime = getRuntime();
-            rotate=0;
+            rotate = 0;
         }
-
         drive((float) 0, (float) 0, (float) rotate);
+        return ret;
     }
 
-    public void limelightInit(){
+    public void limelightInit() {
         imu = hardwareMap.get(IMU.class, "imu");
         imu.initialize(new IMU.Parameters(new RevHubOrientationOnRobot(RevHubOrientationOnRobot.LogoFacingDirection.RIGHT, RevHubOrientationOnRobot.UsbFacingDirection.UP)));
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
         limelight.pipelineSwitch(1);
         waitForStart();
     }
-    public void limelightStart(){
+
+    public void limelightStart() {
         limelight.start();
         imu.resetYaw();
         curTime = getRuntime();
@@ -246,36 +342,118 @@ public class DriveTrigger extends LinearOpMode {
     }
 
 
-    public void drive(float x, float y, float rx){
-        y=-y;
-        x=-x;
+    public void drive(float x, float y, float rx) {
+        y = -y;
+        x = -x;
 //        float y=-gamepad1.left_stick_x;
 //        float x=-gamepad1.left_stick_y;
 //        float rx=gamepad1.right_stick_x;
 
-        backLeft.setPower(RangeLimit(x,y,rx,y+x+rx)); //backR
-        backRight.setPower(RangeLimit(x,y,rx,y-x-rx)); //frontL
-        frontLeft.setPower(RangeLimit(x,y,rx,y-x+rx));  //frontR
-        frontRight.setPower(RangeLimit(x,y,rx,y+x-rx));
+        backLeft.setPower(RangeLimit(x, y, rx, y + x + rx)); //backR
+        backRight.setPower(RangeLimit(x, y, rx, y - x - rx)); //frontL
+        frontLeft.setPower(RangeLimit(x, y, rx, y - x + rx));  //frontR
+        frontRight.setPower(RangeLimit(x, y, rx, y + x - rx));
 
 
         frontLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
     }
 
-    private double RangeLimit(float x,float y, float rx,double value){
-        double denominator = Math.max(Math.abs(y) + Math.abs(x)+ Math.abs(rx), 1);
-        return (value /  denominator)*.925;
-    }
-    public double distanceEQ(double ta){
-        return 65.1194*Math.pow(ta,-0.539833);
+    private double RangeLimit(float x, float y, float rx, double value) {
+        double denominator = Math.max(Math.abs(y) + Math.abs(x) + Math.abs(rx), 1);
+        return (value / denominator) * 1;
     }
 
-    public double hoodEQ(double distance) {
-        return 0.2973814 + (0.8807468 - 0.2973814)/(1 + Math.pow(distance/18.23198, 1.423881));
-    }
-    public double velcoityEQ(double distance){
-        return 98191690 + (558.5428 - 98191690)/(1 + Math.pow(distance/4216956, 1.148414));
+    public double distanceEQ(double ta) {
+        return 65.1194 * Math.pow(ta, -0.539833);
     }
 
-    // todo: write your code here
+    public double hoodEQ(double x) {
+        return -199.5927 + (0.5975992 - -199.5927) / (1 + Math.pow((x / 10182830), 0.5112046));
+    }
+
+    public double velcoityEQ(double x) {
+        return 564.2325 + (457187100 - 564.2325) / (1 + Math.pow((x / 0.00001297586), 1.286723));
+    }
+
+
+    private void turrentAdjust(LLResult result) {
+        error = goalX - result.getTx();
+        //log to DriverHub Tx value
+
+        //how far off from target Tx
+        curTime = getRuntime();
+        error = goalX - result.getTx();
+
+        //kP and kD values for how much by
+        //currently using: Servo
+        if (Math.abs(error) > kPDSwitch) {
+            //outside kPDSwitch on each side
+            kP = 0.0003;
+            kD = 0;
+        } else {
+            //inside kPDSwitch on each side
+            kP = 0;
+            kD = 0;
+        }
+
+        //calculate adjustment
+        double pTerm = error * kP;
+        double dT = Math.max(curTime - lastTime, 0.001);
+        double dTerm = ((error - lastError) / dT) * kD;
+        //limit the rotate so not too powerfull
+        //could not use this and just have a smaller kP and kD
+        rotate = Range.clip(pTerm + dTerm, -0.7, 0.7);
+
+        //so does not rotate if within range
+        if (Math.abs(error) < notRotateTxRange) {
+            rotate = 0;
+        } else if (Math.abs(error) > notRotateTxRange) {
+            rotate *= -1;
+
+            //get last direction to turret search
+            //method: Servo
+            lastPos = Math.signum(rotate);
+        }
+
+        //reset for next time
+        lastError = error;
+        lastTime = curTime;
+        rotateTurret(rotate);
+    }
+
+    private void turrent() {
+        turrnetState state = turrnetState.NONE;
+        //get reuslts and chekc if valid
+        LLResult result = limelight.getLatestResult();
+        if (result != null && result.isValid()) {
+            telemetry.addData("curentx", result.getTx());
+            for (LLResultTypes.FiducialResult fud : result.getFiducialResults()) {
+                int id = fud.getFiducialId();
+                telemetry.addData("id", id);
+                if (TarId == id) {
+                    error = goalX - result.getTx();
+                    if (Math.abs(error) <= notRotateTxRange) {
+                        state = turrnetState.AT;;
+
+                    } else if (Math.abs(error) >= notRotateTxRange) {
+                        turrentAdjust(result);
+                        state = turrnetState.ADJUST;;
+                    }
+                }
+            }
+        } else {
+            lastError = 0;
+            lastTime = getRuntime();
+            searchSmall();
+            state = turrnetState.SMALL;
+        }
+        if (turrnetState.SMALL != state) {
+            searchState = search.NONE;
+        }
+        telemetry.addData("state", state);
+        telemetry.addData("searchstate", searchState);
+        telemetry.addData("lastPos", lastPos);
+
+    }
 }
+// todo: write your code here
