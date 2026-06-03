@@ -49,23 +49,23 @@ public class DriveTrigger extends LinearOpMode {
     private boolean onceb = false;
     private boolean shoot = false;
     private int inc = 900;//1250
-    private int tarId = 24;
+    private int tarId = 20;
 
     //limelight
     private Limelight3A limelight;
     private IMU imu;
     private double error = 0;
     private double lastError = 0;
-    private double goalX = 0;
+    private double goalX = 1;
     private double kP = 0.04;
     private double kD = 0.007;
     private double curTime = 0;
     private double lastTime;
     private double rotate = 0;
     private double hoodA = 0;
-    private double adjust = 0.005;
-    private double notRotateTxRange = 4;
-    private double kPDSwitch = 5;
+    private double adjust = 0.008;
+    private double notRotateTxRange = 3;
+    private double kPDSwitch = 3;
     private double lastPos =0.5;
 
     @Override
@@ -152,7 +152,8 @@ public class DriveTrigger extends LinearOpMode {
                 shoot = true;
                 intake.setPower(.9);
                 transfer.setPower(1);
-                // outtake.setPower(1);
+                outtake.setPower(1);
+                outtake2.setPower(1);
 
 
             } else if (gamepad1.right_trigger >= 0.2) {
@@ -340,7 +341,7 @@ public class DriveTrigger extends LinearOpMode {
         //currently using: Servo
         if (Math.abs(error) > kPDSwitch) {
             //outside kPDSwitch on each side
-            kP = 0.0003;
+            kP = 0.00015;
             kD = 0;
         } else {
             //inside kPDSwitch on each side
@@ -397,6 +398,7 @@ public class DriveTrigger extends LinearOpMode {
                     lastError = 0;
                     lastTime = getRuntime();
                     turretState = turret.SEARCH;
+
                     search();
                 }
             }
