@@ -3,7 +3,6 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.robotcore.util.ElapsedTime;
-import java.util.ArrayList;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -11,25 +10,22 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.*;
 import com.qualcomm.robotcore.util.Range;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
-import java.util.List;
 
 @TeleOp
 
 public class DriveTrigger extends LinearOpMode {
-    private enum search {
-        NONE(0), FIRST(1), SUCCESS(2);
-        private int code;
-        search(int code) {
-            this.code = code;
-        }
-        public int getCode() {
-            return code;
-        }
-        public void setCode(int code) {
-            this.code = code;
-        }
+    private enum searchSmall {
+        NONE, FIRST, SUCCESS;
     }
-    private search searchState = search.NONE;
+    private searchSmall searchSmallState = searchSmall.NONE;
+    private enum searchLarge {
+        NONE, FIRST, SUCCESS;
+    }
+    private searchLarge searchLargeState = searchLarge.NONE;
+    private enum turret {
+        ADJUST, SMALL, LARGE, AT, NONE, SAD;
+    }
+    private turret turretState = turret.NONE;
 
     //drive
     private ElapsedTime time = new ElapsedTime();
@@ -48,7 +44,7 @@ public class DriveTrigger extends LinearOpMode {
     private boolean onceb = false;
     private boolean shoot = false;
     private int inc = 900;//1250
-    private int TarId = 24;
+    private int tarId = 24;
 
     //limelight
     private Limelight3A limelight;
@@ -66,55 +62,6 @@ public class DriveTrigger extends LinearOpMode {
     private double notRotateTxRange = 4;
     private double kPDSwitch = 5;
     private double lastPos =0.5;
-    private enum turrnetState {
-        ADJUST, SMALL, LARGE, AT, NONE;
-    }
-
-
-    private void rotateTurret(double rotate) {
-        if (rotate != 0) {
-            t1.setPosition(t1.getPosition() + rotate);
-            t2.setPosition(t2.getPosition() + rotate);
-        }
-    }
-
-    private void searchSmall() {
-        double cur = t1.getPosition();
-        telemetry.addData("NOTsUB", !(searchState == search.SUCCESS));
-        //move to left
-        if (lastPos > 0 && !(searchState == search.SUCCESS))  {
-            t1.setPosition(t1.getPosition() + adjust);
-            t2.setPosition(t2.getPosition() + adjust);
-            if (t1.getPosition() >= .7) {
-                //switch to go to the right
-                lastPos = -1;
-                if (searchState == search.NONE) {
-                    searchState = search.FIRST;
-                } else if (searchState == search.FIRST) {
-                    searchState = search.SUCCESS;
-                }
-            }
-            //move to the right
-        } else if (lastPos < 0 && !(searchState == search.SUCCESS)) {
-            t1.setPosition(t1.getPosition() - adjust);
-            t2.setPosition(t2.getPosition() - adjust);
-            if (t1.getPosition() <= 0.2) {
-                //switch to go to the left
-                lastPos = 1;
-                if (searchState == search.NONE) {
-                    searchState = search.FIRST;
-                } else if (searchState == search.FIRST) {
-                    searchState = search.SUCCESS;
-                }
-            }
-        }
-        if (searchState == search.SUCCESS) {
-            turretLarge();
-        }
-    }
-
-    private void turretLarge() {
-    }
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -256,7 +203,7 @@ public class DriveTrigger extends LinearOpMode {
             // backRight.setPower(1);
             //long before time had a name, the first spinjitsu master created ninjago GET OUT
 
-            turrent();
+            turret();
 
             telemetry.addData("setVel", inc);
             telemetry.addData("position", hood.getPosition());
@@ -376,7 +323,7 @@ public class DriveTrigger extends LinearOpMode {
     }
 
 
-    private void turrentAdjust(LLResult result) {
+    private void turretAdjust(LLResult result) {
         error = goalX - result.getTx();
         //log to DriverHub Tx value
 
@@ -421,8 +368,8 @@ public class DriveTrigger extends LinearOpMode {
         rotateTurret(rotate);
     }
 
-    private void turrent() {
-        turrnetState state = turrnetState.NONE;
+    private void turret() {
+        turretState = turret.NONE;
         //get reuslts and chekc if valid
         LLResult result = limelight.getLatestResult();
         if (result != null && result.isValid()) {
@@ -430,14 +377,14 @@ public class DriveTrigger extends LinearOpMode {
             for (LLResultTypes.FiducialResult fud : result.getFiducialResults()) {
                 int id = fud.getFiducialId();
                 telemetry.addData("id", id);
-                if (TarId == id) {
+                if (tarId == id) {
                     error = goalX - result.getTx();
                     if (Math.abs(error) <= notRotateTxRange) {
-                        state = turrnetState.AT;;
+                        turretState = turret.AT;;
 
                     } else if (Math.abs(error) >= notRotateTxRange) {
-                        turrentAdjust(result);
-                        state = turrnetState.ADJUST;;
+                        turretAdjust(result);
+                        turretState = turretState.ADJUST;;
                     }
                 }
             }
@@ -445,15 +392,100 @@ public class DriveTrigger extends LinearOpMode {
             lastError = 0;
             lastTime = getRuntime();
             searchSmall();
-            state = turrnetState.SMALL;
+            turretState = turret.SMALL;
         }
-        if (turrnetState.SMALL != state) {
-            searchState = search.NONE;
+        if (turret.SMALL != turretState) {
+            searchSmallState = searchSmall.NONE;
+            searchLargeState = searchLarge.NONE;
         }
-        telemetry.addData("state", state);
-        telemetry.addData("searchstate", searchState);
+        if(turretState == turret.LARGE){
+            turretLarge();
+        }
+        telemetry.addData("state", turretState);
+        telemetry.addData("searchstate", searchSmallState);
         telemetry.addData("lastPos", lastPos);
 
+    }
+    private void rotateTurret(double rotate) {
+        if (rotate != 0) {
+            t1.setPosition(t1.getPosition() + rotate);
+            t2.setPosition(t2.getPosition() + rotate);
+        }
+    }
+
+    private void searchSmall() {
+        //if success from before
+        if (searchSmallState == searchSmall.SUCCESS) {
+            turretState = turret.LARGE;
+            turretLarge();
+        }
+        //move to left
+        if (lastPos > 0 && !(searchSmallState == searchSmall.SUCCESS))  {
+            t1.setPosition(t1.getPosition() + adjust);
+            t2.setPosition(t2.getPosition() + adjust);
+            if (t1.getPosition() >= .7) {
+                //switch to go to the right
+                lastPos = -1;
+                searchSmallInc();
+            }
+            //move to the right
+        } else if (lastPos < 0 && !(searchSmallState == searchSmall.SUCCESS)) {
+            t1.setPosition(t1.getPosition() - adjust);
+            t2.setPosition(t2.getPosition() - adjust);
+            if (t1.getPosition() <= 0.2) {
+                //switch to go to the left
+                lastPos = 1;
+                searchSmallInc();
+            }
+        }
+    }
+
+    private void searchSmallInc() {
+        if (searchSmallState == searchSmall.NONE) {
+            searchSmallState = searchSmall.FIRST;
+        } else if (searchSmallState == searchSmall.FIRST) {
+            searchSmallState = searchSmall.SUCCESS;
+        }
+    }
+
+    private void turretLarge() {
+        //if success from before
+        if (searchLargeState == searchLarge.SUCCESS) {
+            turretState = turret.SAD;
+            restTurret();
+        }
+        //move to left
+        if (lastPos > 0 && !(searchLargeState == searchLarge.SUCCESS))  {
+            t1.setPosition(t1.getPosition() + adjust);
+            t2.setPosition(t2.getPosition() + adjust);
+            if (t1.getPosition() >= .7) {
+                //switch to go to the right
+                lastPos = -1;
+                searchLargeInc();
+            }
+            //move to the right
+        } else if (lastPos < 0 && !(searchLargeState == searchLarge.SUCCESS)) {
+            t1.setPosition(t1.getPosition() - adjust);
+            t2.setPosition(t2.getPosition() - adjust);
+            if (t1.getPosition() <= 0.2) {
+                //switch to go to the left
+                lastPos = 1;
+                searchLargeInc();
+            }
+        }
+    }
+
+    private void searchLargeInc() {
+        if (searchLargeState == searchLarge.NONE) {
+            searchLargeState = searchLarge.FIRST;
+        } else if (searchLargeState == searchLarge.FIRST) {
+            searchLargeState = searchLarge.SUCCESS;
+        }
+    }
+
+    private void restTurret() {
+        t1.setPosition(0.5);
+        t2.setPosition(0.5);
     }
 }
 // todo: write your code here
