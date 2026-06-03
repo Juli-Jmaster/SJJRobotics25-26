@@ -23,9 +23,14 @@ public class DriveTrigger extends LinearOpMode {
     }
     private searchLarge searchLargeState = searchLarge.NONE;
     private enum turret {
-        ADJUST, SMALL, LARGE, AT, NONE, SAD
+        ADJUST, SEARCH, AT, NONE, SAD
     }
     private turret turretState = turret.NONE;
+
+    private enum search {
+        NONE,SMALL, LARGE
+    }
+    private search searchState = search.NONE;
 
     //drive
     private ElapsedTime time = new ElapsedTime();
@@ -359,7 +364,9 @@ public class DriveTrigger extends LinearOpMode {
 
             //get last direction to turret search
             //method: Servo
-            lastPos = Math.signum(rotate);
+            if(!(rotate==0)){
+                lastPos = Math.signum(rotate);
+            }
         }
 
         //reset for next time
@@ -380,29 +387,37 @@ public class DriveTrigger extends LinearOpMode {
                 if (tarId == id) {
                     error = goalX - result.getTx();
                     if (Math.abs(error) <= notRotateTxRange) {
-                        turretState = turret.AT;;
+                        turretState = turret.AT;
 
                     } else if (Math.abs(error) >= notRotateTxRange) {
                         turretAdjust(result);
-                        turretState = turretState.ADJUST;;
+                        turretState = turret.ADJUST;
                     }
+                } else {
+                    lastError = 0;
+                    lastTime = getRuntime();
+                    turretState = turret.SEARCH;
+                    search();
                 }
             }
         } else {
             lastError = 0;
             lastTime = getRuntime();
-            searchSmall();
-            turretState = turret.SMALL;
+            turretState = turret.SEARCH;
+            search();
         }
-        if (turret.SMALL != turretState) {
-            searchSmallState = searchSmall.NONE;
+        if (searchState != search.LARGE) {
             searchLargeState = searchLarge.NONE;
         }
-        if(turretState == turret.LARGE){
-            turretLarge();
+        if (turretState != turret.SEARCH && turretState != turret.SAD) {
+            searchState = search.NONE;
         }
         telemetry.addData("state", turretState);
-        telemetry.addData("searchstate", searchSmallState);
+        telemetry.addData("searchSmallState", searchSmallState);
+        telemetry.addData("searchLargeState", searchLargeState);
+        telemetry.addData("searchState", searchState);
+
+
         telemetry.addData("lastPos", lastPos);
 
     }
@@ -413,14 +428,10 @@ public class DriveTrigger extends LinearOpMode {
         }
     }
 
-    private void searchSmall() {
-        //if success from before
-        if (searchSmallState == searchSmall.SUCCESS) {
-            turretState = turret.LARGE;
-            turretLarge();
-        }
+    private void turretSmall() {
         //move to left
         if (lastPos > 0 && !(searchSmallState == searchSmall.SUCCESS))  {
+            telemetry.addData("here", "yes");
             t1.setPosition(t1.getPosition() + adjust);
             t2.setPosition(t2.getPosition() + adjust);
             if (t1.getPosition() >= .7) {
@@ -449,16 +460,11 @@ public class DriveTrigger extends LinearOpMode {
     }
 
     private void turretLarge() {
-        //if success from before
-        if (searchLargeState == searchLarge.SUCCESS) {
-            turretState = turret.SAD;
-            restTurret();
-        }
         //move to left
         if (lastPos > 0 && !(searchLargeState == searchLarge.SUCCESS))  {
             t1.setPosition(t1.getPosition() + adjust);
             t2.setPosition(t2.getPosition() + adjust);
-            if (t1.getPosition() >= .7) {
+            if (t1.getPosition() >= 1) {
                 //switch to go to the right
                 lastPos = -1;
                 searchLargeInc();
@@ -467,7 +473,7 @@ public class DriveTrigger extends LinearOpMode {
         } else if (lastPos < 0 && !(searchLargeState == searchLarge.SUCCESS)) {
             t1.setPosition(t1.getPosition() - adjust);
             t2.setPosition(t2.getPosition() - adjust);
-            if (t1.getPosition() <= 0.2) {
+            if (t1.getPosition() <= 0) {
                 //switch to go to the left
                 lastPos = 1;
                 searchLargeInc();
@@ -486,6 +492,27 @@ public class DriveTrigger extends LinearOpMode {
     private void restTurret() {
         t1.setPosition(0.5);
         t2.setPosition(0.5);
+    }
+    private void search(){
+        if(searchLargeState == searchLarge.SUCCESS) {
+            restTurret();
+            turretState = turret.SAD;
+            searchSmallState = searchSmall.NONE;
+        } else  if (searchSmallState == searchSmall.SUCCESS){
+            searchLargeState = searchLarge.NONE;
+            searchSmallState = searchSmall.NONE;
+            searchState = search.LARGE;
+            turretLarge();
+        }
+        if(searchState == search.NONE  && turretState == turret.SEARCH){
+            searchState = search.SMALL;
+            searchSmallState = searchSmall.NONE;
+            turretSmall();
+        } else if (searchState == search.SMALL  && turretState == turret.SEARCH){
+            turretSmall();
+        } else if (searchState == search.LARGE  && turretState == turret.SEARCH){
+            turretLarge();
+        }
     }
 }
 // todo: write your code here
