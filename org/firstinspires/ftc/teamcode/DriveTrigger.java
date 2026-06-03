@@ -15,15 +15,15 @@ import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 
 public class DriveTrigger extends LinearOpMode {
     private enum searchSmall {
-        NONE, FIRST, SUCCESS;
+        NONE, FIRST, SUCCESS
     }
     private searchSmall searchSmallState = searchSmall.NONE;
     private enum searchLarge {
-        NONE, FIRST, SUCCESS;
+        NONE, FIRST, SUCCESS
     }
     private searchLarge searchLargeState = searchLarge.NONE;
     private enum turret {
-        ADJUST, SMALL, LARGE, AT, NONE, SAD;
+        ADJUST, SMALL, LARGE, AT, NONE, SAD
     }
     private turret turretState = turret.NONE;
 
