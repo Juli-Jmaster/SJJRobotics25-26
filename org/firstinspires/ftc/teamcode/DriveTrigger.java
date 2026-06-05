@@ -124,6 +124,7 @@ public class DriveTrigger extends LinearOpMode {
         limelightStart();
         while (opModeIsActive()) {
             drive(gamepad1.left_stick_x, gamepad1.left_stick_y, gamepad1.right_stick_x);
+            turret();
             if (gamepad1.ps) {
                 inc = 0;
             }
@@ -150,7 +151,7 @@ public class DriveTrigger extends LinearOpMode {
 
             if (gamepad1.left_trigger >= .2 /*&& ((outtake.getVelocity() >= inc - 40 && outtake.getVelocity() <= inc + 40) || shoot==true)*/) {
                 shoot = true;
-                intake.setPower(.9);
+                intake.setPower(.8);
                 transfer.setPower(1);
                 outtake.setPower(1);
                 outtake2.setPower(1);
@@ -158,7 +159,7 @@ public class DriveTrigger extends LinearOpMode {
 
             } else if (gamepad1.right_trigger >= 0.2) {
                 shoot = false;
-                intake.setPower(1);
+                intake.setPower(0.8);
             } else {
                 transfer.setPower(0);
                 intake.setPower(0);
@@ -209,7 +210,6 @@ public class DriveTrigger extends LinearOpMode {
             // backRight.setPower(1);
             //long before time had a name, the first spinjitsu master created ninjago GET OUT
 
-            turret();
 
             telemetry.addData("setVel", inc);
             telemetry.addData("position", hood.getPosition());
@@ -321,11 +321,13 @@ public class DriveTrigger extends LinearOpMode {
     }
 
     public double hoodEQ(double x) {
-        return -199.5927 + (0.5975992 - -199.5927) / (1 + Math.pow((x / 10182830), 0.5112046));
+        // return -199.5927 + (0.5975992 - -199.5927) / (1 + Math.pow((x / 10182830), 0.5112046));
+        return 0.04866842 + (0.1010431 - 0.04866842)/(1 + Math.pow((x/3.396128),2.283741));
     }
 
-    public double velcoityEQ(double x) {
-        return 564.2325 + (457187100 - 564.2325) / (1 + Math.pow((x / 0.00001297586), 1.286723));
+    public double velocityEQ(double x) {
+        // return 564.2325 + (457187100 - 564.2325) / (1 + Math.pow((x / 0.00001297586), 1.286723));
+        return 621.4664 + (788.5438 - 621.4664)/(1 + Math.pow((x/1.663893),3.428819));
     }
 
 
@@ -389,6 +391,8 @@ public class DriveTrigger extends LinearOpMode {
                     error = goalX - result.getTx();
                     if (Math.abs(error) <= notRotateTxRange) {
                         turretState = turret.AT;
+                        inc = (int) velocityEQ(result.getTa());
+                        hood.setPosition(hoodEQ(result.getTa()));
 
                     } else if (Math.abs(error) >= notRotateTxRange) {
                         turretAdjust(result);
