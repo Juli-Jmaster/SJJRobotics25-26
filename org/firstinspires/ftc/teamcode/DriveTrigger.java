@@ -48,7 +48,7 @@ public class DriveTrigger extends LinearOpMode {
     private boolean oncea = false;
     private boolean onceb = false;
     private boolean shoot = false;
-    private int inc = 900;//1250
+    private int inc = 700;//1250
     private int tarId = 20;
 
     //limelight
@@ -56,7 +56,7 @@ public class DriveTrigger extends LinearOpMode {
     private IMU imu;
     private double error = 0;
     private double lastError = 0;
-    private double goalX = 1;
+    private double goalX = 2;
     private double kP = 0.04;
     private double kD = 0.007;
     private double curTime = 0;
@@ -64,8 +64,8 @@ public class DriveTrigger extends LinearOpMode {
     private double rotate = 0;
     private double hoodA = 0;
     private double adjust = 0.008;
-    private double notRotateTxRange = 3;
-    private double kPDSwitch = 3;
+    private double notRotateTxRange = 1.2;
+    private double kPDSwitch = 5;
     private double lastPos =0.5;
 
     @Override
@@ -93,17 +93,17 @@ public class DriveTrigger extends LinearOpMode {
         // outtake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         outtake.setVelocityPIDFCoefficients(
 
-                85,   // P
+                100,   // P
                 0., // I
                 0,    // D
-                16.8  // F
+                15.2  // F
         );
         outtake2.setVelocityPIDFCoefficients(
 
-                85,   // P
+                100,   // P
                 0., // I
                 0,    // D
-                16.8  // F
+                15.2  // F
         );
         intake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         transfer.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -119,7 +119,7 @@ public class DriveTrigger extends LinearOpMode {
 //        frontLeft.setPower(1);
         limelightInit();
         waitForStart();
-        hood.setPosition(.5);
+        hood.setPosition(0.0);
         // hoodA=.49;
         limelightStart();
         while (opModeIsActive()) {
@@ -152,7 +152,7 @@ public class DriveTrigger extends LinearOpMode {
             if (gamepad1.left_trigger >= .2 /*&& ((outtake.getVelocity() >= inc - 40 && outtake.getVelocity() <= inc + 40) || shoot==true)*/) {
                 shoot = true;
                 intake.setPower(.8);
-                transfer.setPower(1);
+                transfer.setPower(.9);
                 outtake.setPower(1);
                 outtake2.setPower(1);
 
@@ -212,6 +212,7 @@ public class DriveTrigger extends LinearOpMode {
 
 
             telemetry.addData("setVel", inc);
+            telemetry.addData("t1", t1.getPosition());
             telemetry.addData("position", hood.getPosition());
             telemetry.addData("outtake", outtake.getVelocity());
             telemetry.addData("outtake2", outtake2.getVelocity());
@@ -347,7 +348,7 @@ public class DriveTrigger extends LinearOpMode {
             kD = 0;
         } else {
             //inside kPDSwitch on each side
-            kP = 0;
+            kP = 0.0003;
             kD = 0;
         }
 
@@ -391,8 +392,8 @@ public class DriveTrigger extends LinearOpMode {
                     error = goalX - result.getTx();
                     if (Math.abs(error) <= notRotateTxRange) {
                         turretState = turret.AT;
-                        inc = (int) velocityEQ(result.getTa());
-                        hood.setPosition(hoodEQ(result.getTa()));
+                        //    inc = (int) velocityEQ(result.getTa());
+                        //    hood.setPosition(hoodEQ(result.getTa()));
 
                     } else if (Math.abs(error) >= notRotateTxRange) {
                         turretAdjust(result);
