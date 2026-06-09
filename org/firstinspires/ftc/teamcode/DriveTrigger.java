@@ -14,6 +14,8 @@ import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 @TeleOp
 
 public class DriveTrigger extends LinearOpMode {
+    private COLOR color = COLOR.RED;
+
     private enum searchSmall {
         NONE, FIRST, SUCCESS
     }
@@ -31,6 +33,10 @@ public class DriveTrigger extends LinearOpMode {
         NONE,SMALL, LARGE
     }
     private search searchState = search.NONE;
+
+    private enum COLOR {
+        BLUE, RED;
+    }
 
     //drive
     private ElapsedTime time = new ElapsedTime();
@@ -58,6 +64,8 @@ public class DriveTrigger extends LinearOpMode {
     private double lastError = 0;
     private double goalX = 2;
     private double kP = 0.04;
+    private double kPoutside = 0.04;
+    private double kPinside = 0.04;
     private double kD = 0.007;
     private double curTime = 0;
     private double lastTime;
@@ -115,6 +123,13 @@ public class DriveTrigger extends LinearOpMode {
         backRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         frontLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         frontRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        if (color==COLOR.BLUE){
+            tarId=20;
+            goalX=2;
+        } else if (color==COLOR.RED){
+            tarId=24;
+            goalX=-2;
+        }
 
 //        frontLeft.setPower(1);
         limelightInit();
@@ -149,7 +164,7 @@ public class DriveTrigger extends LinearOpMode {
             }
 
 
-            if (gamepad1.left_trigger >= .2 /*&& ((outtake.getVelocity() >= inc - 40 && outtake.getVelocity() <= inc + 40) || shoot==true)*/) {
+            if (gamepad1.left_trigger >= .2 && ((outtake.getVelocity() >= inc - 40 && outtake.getVelocity() <= inc + 40) || shoot) && (turretState == turret.AT || shoot)) {
                 shoot = true;
                 intake.setPower(.8);
                 transfer.setPower(.9);
@@ -160,7 +175,9 @@ public class DriveTrigger extends LinearOpMode {
             } else if (gamepad1.right_trigger >= 0.2) {
                 shoot = false;
                 intake.setPower(0.8);
-            } else {
+            } else if(gamepad1.left_bumper){
+                shoot=true;
+            }else {
                 transfer.setPower(0);
                 intake.setPower(0);
                 outtake.setVelocity(inc); //inc
@@ -210,17 +227,16 @@ public class DriveTrigger extends LinearOpMode {
             // backRight.setPower(1);
             //long before time had a name, the first spinjitsu master created ninjago GET OUT
 
-
-            telemetry.addData("setVel", inc);
-            telemetry.addData("t1", t1.getPosition());
-            telemetry.addData("position", hood.getPosition());
-            telemetry.addData("outtake", outtake.getVelocity());
-            telemetry.addData("outtake2", outtake2.getVelocity());
+            telemetry.addData("side:", color);
+            telemetry.addData("setVel:", inc);
+            telemetry.addData("t1 pos:", t1.getPosition());
+            telemetry.addData("hood pos:", hood.getPosition());
+            telemetry.addData("outtake vel:", outtake.getVelocity());
+            telemetry.addData("outtake2 vel:", outtake2.getVelocity());
             LLResult result = limelight.getLatestResult();
             if (result != null && result.isValid()) {
-                telemetry.addData("Ta", result.getTa());
-                telemetry.addData("Tx", result.getTx());
-                telemetry.addData("distance", distanceEQ(result.getTa()));
+                telemetry.addData("Ta:", result.getTa());
+                telemetry.addData("Tx:", result.getTx());
             }
             telemetry.update();
         }
@@ -321,15 +337,24 @@ public class DriveTrigger extends LinearOpMode {
         return 65.1194 * Math.pow(ta, -0.539833);
     }
 
-    public double hoodEQ(double x) {
+    public double hoodEQclose(double x) {
         // return -199.5927 + (0.5975992 - -199.5927) / (1 + Math.pow((x / 10182830), 0.5112046));
-        return 0.04866842 + (0.1010431 - 0.04866842)/(1 + Math.pow((x/3.396128),2.283741));
+        return 0.07887639 + (0.08804108 - 0.07887639)/(1 + Math.pow((x/2.157642),10.62704));
     }
 
-    public double velocityEQ(double x) {
+    public double velocityEQclose(double x) {
         // return 564.2325 + (457187100 - 564.2325) / (1 + Math.pow((x / 0.00001297586), 1.286723));
-        return 621.4664 + (788.5438 - 621.4664)/(1 + Math.pow((x/1.663893),3.428819));
+        return 647.3348 + (916.5553 - 647.3348)/(1 + Math.pow((x/1.241976),1.971656));
     }
+
+    public double hoodEQfar(double x) {
+        return  0.08833612 + (3.147761 / Math.pow(2, x / 0.0309554));
+    }
+
+    public double velocityEQfar(double x) {
+        return 919.3999 + 61280.93*Math.exp(-24.60434*x);
+    }
+
 
 
     private void turretAdjust(LLResult result) {
@@ -344,11 +369,11 @@ public class DriveTrigger extends LinearOpMode {
         //currently using: Servo
         if (Math.abs(error) > kPDSwitch) {
             //outside kPDSwitch on each side
-            kP = 0.00015;
+            kP = kPoutside;
             kD = 0;
         } else {
             //inside kPDSwitch on each side
-            kP = 0.0003;
+            kP = kPinside;
             kD = 0;
         }
 
@@ -384,17 +409,35 @@ public class DriveTrigger extends LinearOpMode {
         //get reuslts and chekc if valid
         LLResult result = limelight.getLatestResult();
         if (result != null && result.isValid()) {
-            telemetry.addData("curentx", result.getTx());
             for (LLResultTypes.FiducialResult fud : result.getFiducialResults()) {
                 int id = fud.getFiducialId();
-                telemetry.addData("id", id);
+                telemetry.addData("id of tag: ", id);
                 if (tarId == id) {
                     error = goalX - result.getTx();
+
+                    //different number for far or close side
+                    if (result.getTa() < .4){
+                        //far auto
+                        inc = (int) velocityEQfar(result.getTa());
+                        hood.setPosition(hoodEQfar(result.getTa()));
+                        if (color==COLOR.BLUE){
+                            goalX=2;
+                        } else if (color==COLOR.RED){
+                            goalX=-2;
+                        }
+                        kPoutside= .00015/2;
+                        kPinside = 0.0003/2;
+
+                    } else if (result.getTa() > .65){
+                        //close
+                        inc = (int) velocityEQclose(result.getTa());
+                        hood.setPosition(hoodEQclose(result.getTa()));
+                        goalX=0;
+                        kPoutside= .00015;
+                        kPinside = 0.0003;
+                    }
                     if (Math.abs(error) <= notRotateTxRange) {
                         turretState = turret.AT;
-                        //    inc = (int) velocityEQ(result.getTa());
-                        //    hood.setPosition(hoodEQ(result.getTa()));
-
                     } else if (Math.abs(error) >= notRotateTxRange) {
                         turretAdjust(result);
                         turretState = turret.ADJUST;
@@ -419,13 +462,9 @@ public class DriveTrigger extends LinearOpMode {
         if (turretState != turret.SEARCH && turretState != turret.SAD) {
             searchState = search.NONE;
         }
-        telemetry.addData("state", turretState);
-        telemetry.addData("searchSmallState", searchSmallState);
-        telemetry.addData("searchLargeState", searchLargeState);
-        telemetry.addData("searchState", searchState);
-
-
-        telemetry.addData("lastPos", lastPos);
+        telemetry.addData("state:", turretState);
+        telemetry.addData("searchSmallState:", searchSmallState);
+        telemetry.addData("searchState:", searchState);
 
     }
     private void rotateTurret(double rotate) {
@@ -438,7 +477,6 @@ public class DriveTrigger extends LinearOpMode {
     private void turretSmall() {
         //move to left
         if (lastPos > 0 && !(searchSmallState == searchSmall.SUCCESS))  {
-            telemetry.addData("here", "yes");
             t1.setPosition(t1.getPosition() + adjust);
             t2.setPosition(t2.getPosition() + adjust);
             if (t1.getPosition() >= .7) {
@@ -501,25 +539,25 @@ public class DriveTrigger extends LinearOpMode {
         t2.setPosition(0.5);
     }
     private void search(){
-        if(searchLargeState == searchLarge.SUCCESS) {
+        if(searchSmallState == searchSmall.SUCCESS) {   //searchLargeState == searchLarge.SUCCESS
             restTurret();
             turretState = turret.SAD;
             searchSmallState = searchSmall.NONE;
-        } else  if (searchSmallState == searchSmall.SUCCESS){
-            searchLargeState = searchLarge.NONE;
-            searchSmallState = searchSmall.NONE;
-            searchState = search.LARGE;
-            turretLarge();
-        }
+        }// else  if (searchSmallState == searchSmall.SUCCESS){
+//            searchLargeState = searchLarge.NONE;
+//            searchSmallState = searchSmall.NONE;
+//            searchState = search.LARGE;
+//            turretLarge();
+//        }
         if(searchState == search.NONE  && turretState == turret.SEARCH){
             searchState = search.SMALL;
             searchSmallState = searchSmall.NONE;
             turretSmall();
         } else if (searchState == search.SMALL  && turretState == turret.SEARCH){
             turretSmall();
-        } else if (searchState == search.LARGE  && turretState == turret.SEARCH){
-            turretLarge();
-        }
+        }// else if (searchState == search.LARGE  && turretState == turret.SEARCH){
+//            turretLarge();
+//        }
     }
 }
 // todo: write your code here
