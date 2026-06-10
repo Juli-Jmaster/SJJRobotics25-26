@@ -15,22 +15,19 @@ import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 
 public class DriveTrigger extends LinearOpMode {
     private COLOR color = COLOR.RED;
+    private boolean turretMove =false;
 
     private enum searchSmall {
         NONE, FIRST, SUCCESS
     }
     private searchSmall searchSmallState = searchSmall.NONE;
-    private enum searchLarge {
-        NONE, FIRST, SUCCESS
-    }
-    private searchLarge searchLargeState = searchLarge.NONE;
     private enum turret {
         ADJUST, SEARCH, AT, NONE, SAD
     }
     private turret turretState = turret.NONE;
 
     private enum search {
-        NONE,SMALL, LARGE
+        NONE,SMALL
     }
     private search searchState = search.NONE;
 
@@ -135,6 +132,8 @@ public class DriveTrigger extends LinearOpMode {
         limelightInit();
         waitForStart();
         hood.setPosition(0.0);
+        t1.setPosition(0.5);
+        t2.setPosition(0.5);
         // hoodA=.49;
         limelightStart();
         while (opModeIsActive()) {
@@ -162,7 +161,11 @@ public class DriveTrigger extends LinearOpMode {
                 hoodA -= 0.001;
                 hood.setPosition(hoodA);
             }
-
+            if(gamepad1.left_trigger >= .2){
+                turretMove = true;
+            } else {
+                turretMove = false;
+            }
 
             if (gamepad1.left_trigger >= .2 && ((outtake.getVelocity() >= inc - 40 && outtake.getVelocity() <= inc + 40) || shoot) && (turretState == turret.AT || shoot)) {
                 shoot = true;
@@ -174,6 +177,7 @@ public class DriveTrigger extends LinearOpMode {
 
             } else if (gamepad1.right_trigger >= 0.2) {
                 shoot = false;
+                transfer.setPower(-.5);
                 intake.setPower(0.8);
             } else if(gamepad1.left_bumper){
                 shoot=true;
@@ -339,12 +343,15 @@ public class DriveTrigger extends LinearOpMode {
 
     public double hoodEQclose(double x) {
         // return -199.5927 + (0.5975992 - -199.5927) / (1 + Math.pow((x / 10182830), 0.5112046));
-        return 0.07887639 + (0.08804108 - 0.07887639)/(1 + Math.pow((x/2.157642),10.62704));
+        // NEWER BAD return 0.07887639 + (0.08804108 - 0.07887639)/(1 + Math.pow((x/2.157642),10.62704));
+        return 0.04866842 + (0.1010431 - 0.04866842)/(1 + Math.pow((x/3.396128),2.283741));
     }
 
     public double velocityEQclose(double x) {
         // return 564.2325 + (457187100 - 564.2325) / (1 + Math.pow((x / 0.00001297586), 1.286723));
-        return 647.3348 + (916.5553 - 647.3348)/(1 + Math.pow((x/1.241976),1.971656));
+        //NEWER    return (647.3348 + (916.5553 - 647.3348)/(1 + Math.pow((x/1.241976),1.971656)))-20;
+        return (621.4664 + (788.5438 - 621.4664)/(1 + Math.pow((x/1.663893),3.428819)))+20;
+
     }
 
     public double hoodEQfar(double x) {
@@ -417,6 +424,7 @@ public class DriveTrigger extends LinearOpMode {
 
                     //different number for far or close side
                     if (result.getTa() < .4){
+                        notRotateTxRange=1.2;
                         //far auto
                         inc = (int) velocityEQfar(result.getTa());
                         hood.setPosition(hoodEQfar(result.getTa()));
@@ -425,10 +433,11 @@ public class DriveTrigger extends LinearOpMode {
                         } else if (color==COLOR.RED){
                             goalX=-2;
                         }
-                        kPoutside= .00015/2;
-                        kPinside = 0.0003/2;
+                        kPoutside= .00015/1.25;
+                        kPinside = 0.0003/1.25;
 
                     } else if (result.getTa() > .65){
+                        notRotateTxRange=3;
                         //close
                         inc = (int) velocityEQclose(result.getTa());
                         hood.setPosition(hoodEQclose(result.getTa()));
@@ -446,7 +455,6 @@ public class DriveTrigger extends LinearOpMode {
                     lastError = 0;
                     lastTime = getRuntime();
                     turretState = turret.SEARCH;
-
                     search();
                 }
             }
@@ -455,9 +463,6 @@ public class DriveTrigger extends LinearOpMode {
             lastTime = getRuntime();
             turretState = turret.SEARCH;
             search();
-        }
-        if (searchState != search.LARGE) {
-            searchLargeState = searchLarge.NONE;
         }
         if (turretState != turret.SEARCH && turretState != turret.SAD) {
             searchState = search.NONE;
@@ -468,7 +473,7 @@ public class DriveTrigger extends LinearOpMode {
 
     }
     private void rotateTurret(double rotate) {
-        if (rotate != 0) {
+        if (rotate != 0 || turretMove) {
             t1.setPosition(t1.getPosition() + rotate);
             t2.setPosition(t2.getPosition() + rotate);
         }
@@ -504,60 +509,33 @@ public class DriveTrigger extends LinearOpMode {
         }
     }
 
-    private void turretLarge() {
-        //move to left
-        if (lastPos > 0 && !(searchLargeState == searchLarge.SUCCESS))  {
-            t1.setPosition(t1.getPosition() + adjust);
-            t2.setPosition(t2.getPosition() + adjust);
-            if (t1.getPosition() >= 1) {
-                //switch to go to the right
-                lastPos = -1;
-                searchLargeInc();
-            }
-            //move to the right
-        } else if (lastPos < 0 && !(searchLargeState == searchLarge.SUCCESS)) {
-            t1.setPosition(t1.getPosition() - adjust);
-            t2.setPosition(t2.getPosition() - adjust);
-            if (t1.getPosition() <= 0) {
-                //switch to go to the left
-                lastPos = 1;
-                searchLargeInc();
-            }
-        }
-    }
-
-    private void searchLargeInc() {
-        if (searchLargeState == searchLarge.NONE) {
-            searchLargeState = searchLarge.FIRST;
-        } else if (searchLargeState == searchLarge.FIRST) {
-            searchLargeState = searchLarge.SUCCESS;
-        }
-    }
-
     private void restTurret() {
         t1.setPosition(0.5);
         t2.setPosition(0.5);
     }
     private void search(){
-        if(searchSmallState == searchSmall.SUCCESS) {   //searchLargeState == searchLarge.SUCCESS
-            restTurret();
-            turretState = turret.SAD;
-            searchSmallState = searchSmall.NONE;
-        }// else  if (searchSmallState == searchSmall.SUCCESS){
+        if(turretMove) {
+            if (searchSmallState == searchSmall.SUCCESS) {   //searchLargeState == searchLarge.SUCCESS
+                restTurret();
+                turretState = turret.SAD;
+//            searchSmallState = searchSmall.NONE;
+            }// else  if (searchSmallState == searchSmall.SUCCESS){
 //            searchLargeState = searchLarge.NONE;
 //            searchSmallState = searchSmall.NONE;
 //            searchState = search.LARGE;
 //            turretLarge();
 //        }
-        if(searchState == search.NONE  && turretState == turret.SEARCH){
-            searchState = search.SMALL;
-            searchSmallState = searchSmall.NONE;
-            turretSmall();
-        } else if (searchState == search.SMALL  && turretState == turret.SEARCH){
-            turretSmall();
-        }// else if (searchState == search.LARGE  && turretState == turret.SEARCH){
+            if (searchState == search.NONE && turretState == turret.SEARCH) {
+                searchState = search.SMALL;
+                searchSmallState = searchSmall.NONE;
+                turretSmall();
+            } else if (searchState == search.SMALL && turretState == turret.SEARCH) {
+                turretSmall();
+            }// else if (searchState == search.LARGE  && turretState == turret.SEARCH){
 //            turretLarge();
 //        }
+
+        }
     }
 }
 // todo: write your code here
