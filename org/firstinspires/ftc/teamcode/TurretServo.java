@@ -14,9 +14,9 @@ public class TurretServo extends LinearOpMode {
     private Servo t2;
     private Servo t1;
     private double adjust = 0.00125;
-    public boolean block = false;
+    public boolean block = true;
     //block the search feature
-    public boolean blockss = false;
+    public boolean blockss = true;
 
     //limelightTurret
     private Limelight3A limelight;
@@ -138,12 +138,12 @@ public class TurretServo extends LinearOpMode {
             } else {
                 lastError = 0;
                 lastTime = getRuntime();
-                searchSmall();
+                search();
             }
         } else {
             lastError = 0;
             lastTime = getRuntime();
-            searchSmall();
+            search();
         }
         telemetry.addData("me", rotate);
     }
@@ -194,7 +194,7 @@ public class TurretServo extends LinearOpMode {
         } else if(lastPos < 0 && !blockss){
             t1.setPosition(t1.getPosition()- adjust);
             t2.setPosition(t2.getPosition()- adjust);
-            if (t1.getPosition() <= 0.3){
+            if (t1.getPosition() <= 0.2){
                 //switch to go to the left
                 lastPos=1;
             }
