@@ -426,8 +426,8 @@ public class DriveTrigger extends LinearOpMode {
                     if (result.getTa() < .4){
                         notRotateTxRange=1.2;
                         //far auto
-                        // inc = (int) velocityEQfar(result.getTa());
-                        //hood.setPosition(hoodEQfar(result.getTa()));
+                        inc = (int) velocityEQfar(result.getTa());
+                        hood.setPosition(hoodEQfar(result.getTa()));
                         if (color==COLOR.BLUE){
                             goalX=3;
                         } else if (color==COLOR.RED){
