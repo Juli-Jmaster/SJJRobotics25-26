@@ -180,7 +180,7 @@ public class DriveTrigger extends LinearOpMode {
                 transfer.setPower(-.5);
                 intake.setPower(0.8);
             } else if(gamepad1.left_bumper){
-                shoot=true;
+                turretMove=true;
             }else {
                 transfer.setPower(0);
                 intake.setPower(0);
@@ -429,9 +429,9 @@ public class DriveTrigger extends LinearOpMode {
                         inc = (int) velocityEQfar(result.getTa());
                         hood.setPosition(hoodEQfar(result.getTa()));
                         if (color==COLOR.BLUE){
-                            goalX=2;
+                            goalX=3;
                         } else if (color==COLOR.RED){
-                            goalX=-2;
+                            goalX=-3;
                         }
                         kPoutside= .00015/1.25;
                         kPinside = 0.0003/1.25;
@@ -466,6 +466,9 @@ public class DriveTrigger extends LinearOpMode {
         }
         if (turretState != turret.SEARCH && turretState != turret.SAD) {
             searchState = search.NONE;
+        }
+        if (searchState != search.SMALL) {
+            searchSmallState = searchSmall.NONE;
         }
         telemetry.addData("state:", turretState);
         telemetry.addData("searchSmallState:", searchSmallState);
