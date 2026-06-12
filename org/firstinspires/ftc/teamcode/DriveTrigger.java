@@ -15,7 +15,10 @@ import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 
 public class DriveTrigger extends LinearOpMode {
     private COLOR color = COLOR.RED;
-    private boolean turretMove =false;
+    private double restPos = 0.5;
+    private double smallTurretPos = .2;
+    private double largeTurretPos = .7;
+
 
     private enum searchSmall {
         NONE, FIRST, SUCCESS
@@ -121,9 +124,13 @@ public class DriveTrigger extends LinearOpMode {
         frontLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         frontRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         if (color==COLOR.BLUE){
+            smallTurretPos = 0.4;
+            largeTurretPos = 1;
             tarId=20;
             goalX=2;
         } else if (color==COLOR.RED){
+            smallTurretPos = 0;
+            largeTurretPos = .6;
             tarId=24;
             goalX=-2;
         }
@@ -161,14 +168,13 @@ public class DriveTrigger extends LinearOpMode {
                 hoodA -= 0.001;
                 hood.setPosition(hoodA);
             }
-            if(gamepad1.left_trigger >= .2){
-                turretMove = true;
-            } else {
-                turretMove = false;
+            if(gamepad1.left_bumper){
+                searchSmallState = searchSmall.NONE;
             }
 
             if (gamepad1.left_trigger >= .2 && ((outtake.getVelocity() >= inc - 40 && outtake.getVelocity() <= inc + 40) || shoot) && (turretState == turret.AT || shoot)) {
                 shoot = true;
+                restPos = t1.getPosition();
                 intake.setPower(.8);
                 transfer.setPower(.9);
                 outtake.setPower(1);
@@ -179,9 +185,7 @@ public class DriveTrigger extends LinearOpMode {
                 shoot = false;
                 transfer.setPower(-.5);
                 intake.setPower(0.8);
-            } else if(gamepad1.left_bumper){
-                turretMove=true;
-            }else {
+            } else {
                 transfer.setPower(0);
                 intake.setPower(0);
                 outtake.setVelocity(inc); //inc
@@ -476,7 +480,7 @@ public class DriveTrigger extends LinearOpMode {
 
     }
     private void rotateTurret(double rotate) {
-        if (rotate != 0 || turretMove) {
+        if (rotate != 0) {
             t1.setPosition(t1.getPosition() + rotate);
             t2.setPosition(t2.getPosition() + rotate);
         }
@@ -487,7 +491,7 @@ public class DriveTrigger extends LinearOpMode {
         if (lastPos > 0 && !(searchSmallState == searchSmall.SUCCESS))  {
             t1.setPosition(t1.getPosition() + adjust);
             t2.setPosition(t2.getPosition() + adjust);
-            if (t1.getPosition() >= .7) {
+            if (t1.getPosition() >= largeTurretPos) {
                 //switch to go to the right
                 lastPos = -1;
                 searchSmallInc();
@@ -496,7 +500,7 @@ public class DriveTrigger extends LinearOpMode {
         } else if (lastPos < 0 && !(searchSmallState == searchSmall.SUCCESS)) {
             t1.setPosition(t1.getPosition() - adjust);
             t2.setPosition(t2.getPosition() - adjust);
-            if (t1.getPosition() <= 0.2) {
+            if (t1.getPosition() <= smallTurretPos) {
                 //switch to go to the left
                 lastPos = 1;
                 searchSmallInc();
@@ -513,32 +517,22 @@ public class DriveTrigger extends LinearOpMode {
     }
 
     private void restTurret() {
-        t1.setPosition(0.5);
-        t2.setPosition(0.5);
+        t1.setPosition(restPos);
+        t2.setPosition(restPos);
     }
     private void search(){
-        if(turretMove) {
-            if (searchSmallState == searchSmall.SUCCESS) {   //searchLargeState == searchLarge.SUCCESS
-                restTurret();
-                turretState = turret.SAD;
-//            searchSmallState = searchSmall.NONE;
-            }// else  if (searchSmallState == searchSmall.SUCCESS){
-//            searchLargeState = searchLarge.NONE;
-//            searchSmallState = searchSmall.NONE;
-//            searchState = search.LARGE;
-//            turretLarge();
-//        }
-            if (searchState == search.NONE && turretState == turret.SEARCH) {
-                searchState = search.SMALL;
-                searchSmallState = searchSmall.NONE;
-                turretSmall();
-            } else if (searchState == search.SMALL && turretState == turret.SEARCH) {
-                turretSmall();
-            }// else if (searchState == search.LARGE  && turretState == turret.SEARCH){
-//            turretLarge();
-//        }
-
+        if (searchSmallState == searchSmall.SUCCESS) {   //searchLargeState == searchLarge.SUCCESS
+            restTurret();
+            turretState = turret.SAD;
         }
+        if (searchState == search.NONE && turretState == turret.SEARCH) {
+            searchState = search.SMALL;
+            searchSmallState = searchSmall.NONE;
+            turretSmall();
+        } else if (searchState == search.SMALL && turretState == turret.SEARCH) {
+            turretSmall();
+        }
+
     }
 }
 // todo: write your code here
